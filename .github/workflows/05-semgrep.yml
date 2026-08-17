@@ -17,7 +17,7 @@ jobs:
     # Semgrep은 uv가 아니라 공식 컨테이너 이미지에서 실행합니다.
     container: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # ── TODO (도구 실행) ─────────────────────────────────
       # Semgrep을 레지스트리 팩(p/python) + 자작 룰(.semgrep/rules.yml)로 실행하고,
       # SARIF 파일(semgrep.sarif)을 만드는 스텝을 완성하세요.
