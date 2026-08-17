@@ -1,0 +1,9 @@
+# Semgrep의 p/python 팩은 bandit 계열 규칙과 겹칩니다.
+# 아래 네 파일은 이미 Ruff의 S 규칙(S324/S602/S301/S608)이 담당하므로,
+# Semgrep이 같은 것을 이중으로 리포트하지 않도록 여기서 제외합니다.
+# 이 중복은 실제로 일어나는 현상이며(도구 팩이 서로 겹침),
+# 교육 목적상 '어느 도구가 무엇을 담당하는지'를 분명히 하려고 일부러 억제합니다.
+app/insecure_hash.py
+app/shell_injection.py
+app/unsafe_pickle.py
+app/sqli_fstring.py

@@ -1,0 +1,25 @@
+name: "06 - gitleaks (secret scanning)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 전체 히스토리를 스캔해야 과거 커밋에 묻힌 시크릿까지 잡습니다.
+          fetch-depth: 0
+      # 머지 게이트: leaky_settings.py의 가짜 PAT와 fake_deploy_key.pem의
+      # 가짜 RSA 키가 검출되면 이 스텝이 빨간불이 됩니다.
+      # gitleaks-action v2는 개인(user) 계정 레포는 무료입니다.
+      # (org 레포라면 바이너리를 직접 내려받아 `gitleaks detect`로 대체할 수 있습니다.)
+      - name: gitleaks (머지 게이트)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

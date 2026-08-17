@@ -1,0 +1,25 @@
+# 레지스트리 팩(p/python)에 더해, 데이터 흐름(taint)을 직접 추적하는 커스텀
+# 규칙을 한 개 둡니다. 문자열 조립 SQL(Ruff S608)이 놓치는 sqli_taint_only.py를
+# 이 규칙이 잡습니다.
+#
+# 동작: 사용자 입력(flask request)을 source로, cursor.execute(...)를 sink로 보고,
+#       source에서 sink까지 값이 흐르면(문자열 조립을 거쳐도) 발화합니다.
+# 구조: source / sink / (필요하면) sanitizer 세 자리로 이루어집니다. 직접 룰을
+#       써 볼 때 참고할 문서는 아래에 있습니다.
+#       https://semgrep.dev/docs/writing-rules/data-flow/taint-mode
+rules:
+  - id: lab-taint-sql-concat
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: >
+      사용자 입력이 문자열 조립을 거쳐 SQL 실행 지점까지 흘러갑니다.
+      문자열 조립 SQL(Ruff S608)은 이 패턴을 놓칩니다.
+      까닭은 README의 "패턴 매칭과 taint 분석의 검출 범위 차이"에 있습니다.
+    pattern-sources:
+      - pattern: flask.request.args.get(...)
+      - pattern: flask.request.args[...]
+      - pattern: flask.request.form.get(...)
+    pattern-sinks:
+      - pattern: $CURSOR.execute($QUERY, ...)
+        focus-metavariable: $QUERY

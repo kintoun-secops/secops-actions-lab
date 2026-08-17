@@ -1,0 +1,254 @@
+name: "07 - CI summary (orchestrator)"
+
+# ── 이 파일의 역할 ────────────────────────────────────────
+# 01~06은 도구 하나씩을 담당하는 재사용 워크플로(on: workflow_call)이고,
+# 이 파일이 이벤트를 받아 여섯을 한 실행 안으로 불러 모은 뒤 마지막에
+# summary 잡 하나로 접습니다. 머지 게이트에 등록할 필수 상태 체크는 그 하나입니다.
+#
+# needs: 는 같은 워크플로 파일 안의 잡끼리만 걸립니다. 01~06이 각자 트리거되어
+# 따로 도는 동안에는 서로를 needs: 로 참조할 수 없고, "여섯이 전부 끝났는지"를
+# 판정할 방법도 없습니다. 택하지 않은 쪽까지 함께 적어 둡니다.
+#
+#   workflow_run  다른 워크플로의 '완료'를 이벤트로 받습니다. 다만 이 이벤트는
+#                 기본 브랜치에 있는 정의로만 돌고, 그 결과가 PR에 체크로 붙지
+#                 않습니다. PR을 막는 필수 체크를 만드는 목적에는 쓰이지 못합니다.
+#   uses: 로 부르기  이 파일이 택한 쪽입니다. 불려 온 잡은 이 실행의 잡 그래프
+#                 안으로 들어오므로 needs: 가 그대로 걸립니다. 도구 정의는
+#                 01~06에 한 벌만 남아 중복도 생기지 않습니다.
+#
+# 문서: https://docs.github.com/actions/sharing-automations/reusing-workflows
+#       https://docs.github.com/actions/reference/workflows-and-actions/events-that-trigger-workflows
+#       https://docs.github.com/actions/reference/workflows-and-actions/workflow-syntax
+# ──────────────────────────────────────────────────────────
+
+# 이벤트 하나 = 목적 하나.
+#   pull_request  빠른 피드백. 인라인 리뷰와 커버리지 코멘트가 여기서 붙습니다.
+#   push (main)   기준선. 머지된 상태를 전부 스캔하고 SARIF를 코드 스캐닝에 올립니다.
+#   schedule      시간에 대한 방어. 코드가 그대로여도 새 CVE와 갱신된 룰 때문에
+#                 어제 초록이던 커밋이 오늘 빨간불이 될 수 있습니다.
+#   workflow_dispatch  손으로 돌려 보는 통로.
+#
+# PR과 main 푸시가 갈리는 지점은 셋입니다.
+#   코멘트 채널   reviewdog 인라인과 커버리지 스티키는 PR에만 붙습니다(01·03의 if:).
+#   SARIF 의미    main 업로드가 기본 브랜치의 기준선이 되고, PR 업로드는 그
+#                 기준선과의 차이로 읽힙니다(05는 양쪽 다 올립니다).
+#   실행 취소     PR은 최신 커밋의 결과만 쓰여 앞선 실행을 버리고, main 기준선
+#                 실행은 끝까지 돕니다(아래 concurrency).
+# 문서 변경 건너뛰기는 pull_request와 push에만 걸립니다. schedule과
+# workflow_dispatch는 비교할 이전 상태가 없어 늘 지정된 몫을 돕니다.
+#
+# cron '30 20 * * 0' 은 매주 일요일 20:30 UTC(= 월요일 05:30 KST)입니다. cron은
+# 항상 UTC로 읽습니다. 정시(00분)에는 실행이 몰려 지연이 잦아 30분에 두었습니다.
+# 예약 실행은 기본 브랜치에 있는 정의로만 돕니다.
+# 문서: https://docs.github.com/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 20 * * 0"
+  workflow_dispatch:
+
+# 같은 대상(PR 또는 브랜치)의 실행을 한 줄로 세웁니다.
+# PR에 커밋을 연달아 밀면 최신 커밋의 결과만 쓰이므로 앞선 실행을 버립니다.
+# main 기준선 실행은 끝까지 돌아야 SARIF가 올라가므로 취소하지 않습니다.
+# 문서: https://docs.github.com/actions/reference/workflows-and-actions/workflow-syntax#concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# 여기서는 아무 권한도 주지 않고, 필요한 잡에만 아래에서 따로 얹습니다.
+# 재사용 워크플로에 건네지는 토큰의 권한은 '부르는 쪽 잡'의 permissions가 정하고,
+# 불려 간 쪽은 그보다 좁힐 수만 있습니다.
+# 문서: https://docs.github.com/actions/how-tos/write-workflows/choose-what-workflows-do/control-permissions-for-github_token
+permissions: {}
+
+jobs:
+  # ── 변경 판정 ────────────────────────────────────────────
+  # 문서만 고친 PR에서 도구 여섯을 다 돌리면 러너 시간과 대기 시간이 그대로 나갑니다.
+  #
+  # 워크플로 맨 위 on: 에 paths-ignore: 를 얹는 방법이 먼저 보이는데, 그러면
+  # 워크플로 자체가 시작되지 않습니다. 실행이 없으면 summary 체크도 보고되지
+  # 않고, 그 체크를 필수 상태 체크로 걸어 둔 PR은 "Expected — Waiting for
+  # status to be reported"에 멈춘 채 머지되지 않습니다. 잡을 건너뛰는 것과
+  # 체크를 보고하지 않는 것은 다른 상태입니다. 그래서 걸러내는 조건은 워크플로가
+  # 아니라 잡에 둡니다. summary는 늘 돌아 체크를 보고하고, 도구 잡만 아래
+  # 판정에 걸립니다.
+  #
+  # 판정에는 별도 액션 대신 git diff를 씁니다. 같은 명령을 로컬에서 그대로
+  # 돌려 볼 수 있고, 공급망에 액션이 하나 덜 붙습니다.
+  # _solution/ 이 제외 목록에 있는 것은 그 폴더가 정답 문서이지 검사 대상
+  # 코드가 아니기 때문입니다.
+  # 문서: https://docs.github.com/actions/reference/workflows-and-actions/workflow-syntax#onpushpull_requestpull_request_targetpathspaths-ignore
+  #       https://docs.github.com/actions/reference/workflows-and-actions/workflow-commands#setting-an-output-parameter
+  # ─────────────────────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      # 판정이 비어 있으면 '바뀌었다' 쪽으로 떨어집니다. 판정이 불확실할 때
+      # 검사를 건너뛰지 않는 방향입니다.
+      code: ${{ steps.filter.outputs.code || 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 비교 대상 커밋이 로컬에 있어야 diff가 됩니다.
+          fetch-depth: 0
+      - id: filter
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # 예약 실행과 수동 실행에는 비교할 '이전 상태'가 없습니다. 늘 돕니다.
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$GITHUB_EVENT_NAME" != "push" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # 새 브랜치의 첫 푸시나 강제 푸시 뒤에는 기준 커밋이 비어 있거나
+          # 사라져 있습니다. 판정이 불가능하면 역시 '바뀌었다'로 둡니다.
+          if [ -z "$BASE" ] || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$BASE" HEAD)
+          echo "바뀐 파일"
+          echo "$changed"
+          # 마크다운·LICENSE·.gitignore·_solution/ 은 검사 대상 코드가 아닙니다.
+          # 이 넷을 걷어내고도 남는 것이 있으면 코드가 바뀐 것입니다.
+          code_changed=$(echo "$changed" | grep -Ev '\.md$|^LICENSE$|^\.gitignore$|^_solution/' || true)
+          if [ -n "$code_changed" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # 도구 잡의 조건은 두 가지입니다.
+  #  (1) 코드가 바뀌었는지 — changes 잡의 code 출력. 잡 출력은 문자열이라
+  #      'true' 문자열과 비교합니다.
+  #  (2) 예약 실행인지 — 코드가 그대로여도 결과가 달라지는 경우를 예약 실행이
+  #      잡으므로, 코드가 그대로면 결과도 그대로인 도구는 여기서 빠집니다.
+  # 예약 실행과 수동 실행에서 changes는 code=true로 떨어지므로, (1)만 건 잡은
+  # 그 두 이벤트에서 늘 돕니다.
+  ruff:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'
+    uses: ./.github/workflows/01-ruff.yml
+    permissions:
+      contents: read
+      pull-requests: write   # reviewdog 인라인 코멘트용
+
+  mypy:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'
+    uses: ./.github/workflows/02-mypy.yml
+    permissions:
+      contents: read
+
+  pytest:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'
+    uses: ./.github/workflows/03-pytest.yml
+    permissions:
+      contents: read
+      pull-requests: write   # 커버리지 스티키 코멘트용
+
+  # 새 CVE는 코드와 무관하게 공개됩니다. 예약 실행에서도 도는 쪽입니다.
+  pip-audit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/04-pip-audit.yml
+    permissions:
+      contents: read
+
+  # 레지스트리 룰(p/python)은 코드와 무관하게 갱신됩니다. 예약 실행에서도 도는 쪽입니다.
+  semgrep:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/05-semgrep.yml
+    permissions:
+      contents: read
+      security-events: write   # 코드 스캐닝(SARIF) 업로드용
+
+  gitleaks:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'
+    uses: ./.github/workflows/06-gitleaks.yml
+    permissions:
+      contents: read
+    # GITHUB_TOKEN은 불려 간 워크플로에도 자동으로 주어지지만, 사용자가 만든
+    # 시크릿은 따로 넘겨야 닿습니다. gitleaks-action은 org 레포에서 GITLEAKS_LICENSE를
+    # 참조하므로 여기서 넘겨 둡니다. inherit는 가진 시크릿을 전부 넘기는 방식이라,
+    # 좁히려면 secrets: { NAME: ${{ secrets.NAME }} } 형태로 필요한 것만 적습니다.
+    secrets: inherit
+
+  # 여섯의 결과를 한 곳으로 모으는 잡입니다. 머지 게이트에 등록할 필수 상태
+  # 체크는 이 잡 하나(summary)면 되고, 도구를 늘려도 룰셋은 그대로 둡니다.
+  summary:
+    runs-on: ubuntu-latest
+    needs: [changes, ruff, mypy, pytest, pip-audit, semgrep, gitleaks]
+    # needs로 묶인 잡이 하나라도 실패하거나 건너뛰어지면 이 잡도 기본적으로
+    # 함께 건너뛰어집니다. 실패했을 때도 표가 남고 문서만 바뀐 PR에서도 체크가
+    # 보고되도록 always()를 씁니다.
+    if: always()
+    permissions: {}
+    steps:
+      # 잡 결과를 표현식으로 직접 셸에 끼워 넣는 대신 env로 받습니다. 값이
+      # 스크립트 본문으로 조립되면 주입 지점이 됩니다.
+      # pip-audit처럼 이름에 하이픈이 들어간 잡은 needs.pip-audit 으로 쓰면
+      # 뺄셈으로 읽히므로, 대괄호 색인 문법을 씁니다.
+      # 문서: https://docs.github.com/actions/reference/evaluate-expressions-in-workflows-and-actions
+      #       https://docs.github.com/actions/reference/workflows-and-actions/workflow-commands#adding-a-job-summary
+      - name: 결과 표를 잡 요약에 기록
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          RUFF: ${{ needs.ruff.result }}
+          MYPY: ${{ needs.mypy.result }}
+          PYTEST: ${{ needs.pytest.result }}
+          PIP_AUDIT: ${{ needs['pip-audit'].result }}
+          SEMGREP: ${{ needs.semgrep.result }}
+          GITLEAKS: ${{ needs.gitleaks.result }}
+        run: |
+          fail=0
+          # 건너뛴 잡은 실패가 아닙니다. 문서만 바뀐 PR은 여섯 줄이 모두
+          # '건너뜀'인 채로 초록으로 끝납니다.
+          row() {
+            local label="$1" result="$2" owner="$3" mark
+            case "$result" in
+              success)   mark="통과" ;;
+              skipped)   mark="건너뜀" ;;
+              cancelled) mark="취소"; fail=1 ;;
+              *)         mark="실패"; fail=1 ;;
+            esac
+            printf '| %s | %s | %s |\n' "$label" "$mark" "$owner"
+          }
+          {
+            echo "## 보안 CI 요약"
+            echo ""
+            echo "이벤트 \`${GITHUB_EVENT_NAME}\` · 대상 \`${GITHUB_REF_NAME}\`"
+            echo ""
+            echo "| 도구 | 결과 | 담당 파일 |"
+            echo "|---|---|---|"
+            row "Ruff (format + lint + S)" "$RUFF" "messy_format / lint_playground / insecure_hash / shell_injection / unsafe_pickle / sqli_fstring"
+            row "mypy" "$MYPY" "type_confusion.py"
+            row "pytest" "$PYTEST" "price_logic.py"
+            row "pip-audit" "$PIP_AUDIT" "uv.lock (전이 의존성 포함)"
+            row "Semgrep (taint)" "$SEMGREP" "sqli_taint_only.py"
+            row "gitleaks" "$GITLEAKS" "leaky_settings.py / deploy/fake_deploy_key.pem"
+            echo ""
+            if [ "$CODE" = "false" ]; then
+              echo "문서만 바뀐 변경이라 도구 잡은 돌지 않았습니다. 마크다운과 LICENSE, .gitignore, _solution/ 은 검사 대상 코드가 아닙니다."
+            else
+              echo "'건너뜀'은 이 이벤트에서 돌지 않도록 설계된 잡입니다. 예약 실행에서는 pip-audit과 Semgrep만 돕니다."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          # 변경 판정이 끝나지 못하면 도구 잡이 전부 건너뛰어져 표가 모두
+          # '건너뜀'이 됩니다. 그 상태가 통과로 처리되지 않도록 따로 확인합니다.
+          if [ "$CHANGES" != "success" ]; then
+            echo "변경 판정 잡(changes)이 정상 종료되지 않았습니다." >> "$GITHUB_STEP_SUMMARY"
+            fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then
+            echo "실패한 체크가 있어 이 요약도 실패로 끝납니다." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

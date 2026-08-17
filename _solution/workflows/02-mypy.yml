@@ -1,0 +1,20 @@
+name: "02 - mypy (static types)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      # 머지 게이트: type_confusion.py에서 반환 타입 오류(return-value)와
+      # 인자 타입 오류(arg-type) 2건이 뜨면 빨간불이 됩니다.
+      - name: mypy (머지 게이트)
+        run: uv run mypy app/

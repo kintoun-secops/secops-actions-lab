@@ -1,0 +1,31 @@
+name: "03 - pytest (regression tests)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write   # 커버리지 스티키 코멘트용
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      # 머지 게이트: test_price_logic이 실패하면 이 스텝이 빨간불이 됩니다.
+      # (실패해도 junit/coverage xml은 생성되므로 아래 코멘트 스텝이 동작합니다.)
+      - name: pytest (+커버리지 리포트, 머지 게이트)
+        run: uv run pytest --cov=app --junitxml=pytest.xml --cov-report=xml
+      # 조건이 둘입니다.
+      #   always()  앞 스텝이 실패해도 커버리지 코멘트를 남깁니다.
+      #   이벤트    스티키 코멘트를 붙일 대상은 PR입니다. main 푸시와 예약 실행에는
+      #             그 PR이 없습니다.
+      - name: 커버리지 스티키 코멘트
+        if: always() && github.event_name == 'pull_request'
+        uses: MishaKav/pytest-coverage-comment@v1
+        with:
+          pytest-xml-coverage-path: coverage.xml
+          junitxml-path: pytest.xml

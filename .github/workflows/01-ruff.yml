@@ -1,0 +1,60 @@
+name: "01 - Ruff (format + lint + security)"
+
+# 이 파일은 07-ci-summary.yml이 불러 쓰는 '재사용 워크플로'입니다.
+#   workflow_call    다른 워크플로가 uses: 로 이 파일을 부를 수 있게 합니다.
+#   workflow_dispatch  Actions 탭에서 이 도구 하나만 따로 돌려 볼 때 씁니다.
+# pull_request·push·schedule 트리거는 07 한곳에 모여 있습니다. 여기에도 두면
+# 같은 커밋에 체크가 두 벌 붙습니다.
+# 문서: https://docs.github.com/actions/sharing-automations/reusing-workflows
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write   # reviewdog 인라인 코멘트용
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      - uses: reviewdog/action-setup@v1
+        with:
+          reviewdog_version: latest
+      # ── TODO (이벤트 분기) ───────────────────────────────
+      # 아래 reviewdog 스텝의 if: 만 채우세요. 실행 명령은 이미 들어 있어,
+      # 채울 것은 실행 조건입니다.
+      #  - github-pr-review 리포터는 PR diff에 든 줄에만 인라인 코멘트를 답니다.
+      #  - main 푸시나 예약 실행에는 코멘트를 달 PR 자체가 없어, 이 스텝은 할 일이
+      #    없는 채로 토큰만 씁니다.
+      # 힌트: github 컨텍스트에 지금 실행을 일으킨 이벤트 이름이 들어 있습니다.
+      #       재사용 워크플로 안에서도 이 값은 '부른 쪽(07)'의 이벤트를 가리킵니다.
+      # 문서: https://docs.github.com/actions/reference/contexts-reference#github-context
+      #       https://docs.github.com/actions/reference/evaluate-expressions-in-workflows-and-actions
+      # ─────────────────────────────────────────────────────
+      - name: Ruff lint -> reviewdog (PR 인라인 리뷰)
+        if: false   # TODO: PR 이벤트일 때만 돌도록 바꾸세요.
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uv run ruff check app/ --output-format=rdjson |
+            reviewdog -f=rdjson -reporter=github-pr-review -level=warning
+      # ── TODO (도구 실행) ─────────────────────────────────
+      # Ruff는 두 가지 일을 합니다. 스텝을 두 개 만들면 됩니다.
+      #  (1) 포매터 검사: 스타일이 어긋난 파일을 찾습니다.
+      #      결함 검출이 아니라 '스타일 통일'이 목적이라, diff와 이력을
+      #      깔끔하게 유지합니다. 문서: https://docs.astral.sh/ruff/formatter/
+      #  (2) 린트 + 보안 검사: 버그·구식 문법·보안 패턴을 찾습니다.
+      #      규칙 선택은 pyproject.toml의 [tool.ruff.lint]가 이미 합니다.
+      #      문서: https://docs.astral.sh/ruff/linter/  https://docs.astral.sh/ruff/rules/
+      # 힌트: 이 저장소는 uv로 관리됩니다. `uv run <도구>` 형태를 떠올려 보세요.
+      #       포매터는 고치지 않고 검사만 하는 옵션(--check)이 있습니다.
+      # 위 reviewdog 스텝이 이미 ruff를 한 번 부르지만, 그쪽은 발견을 코멘트로
+      # 옮기기만 하고 종료 코드를 바꾸지 않습니다. 머지를 막으려면 게이트 스텝이
+      # 따로 있어야 합니다.
+      # 성공 기준: 이 워크플로가 '빨간불'이 되고, 로그에 포맷 불일치(messy_format)와
+      #            문자열 조립 SQL(S608)·가변 기본 인자(B006) 같은 린트가 함께 보이면 됩니다.
+      # ─────────────────────────────────────────────────────
+      - name: Run Ruff (TODO)
+        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."

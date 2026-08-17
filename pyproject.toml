@@ -1,0 +1,57 @@
+[project]
+name = "secops-actions-lab"
+version = "0.1.0"
+description = "PR 루프로 보안 CI(GitHub Actions)를 직접 조립·운영해 보는 실습 레포입니다."
+requires-python = ">=3.12"
+dependencies = [
+    # flask는 werkzeug 2.x와 함께 풀리도록(co-resolve) 정확히 핀했습니다.
+    "flask==2.2.5",
+    # jinja2는 '직접 의존성' CVE 타깃입니다(CVE-2024-22195 외 다수).
+    "jinja2==3.1.2",
+    # requests도 CVE 타깃이지만 코드 어디서도 import하지 않습니다.
+    # (import하면 mypy가 타입 스텁 부재로 시끄러워지므로 일부러 빼 둡니다.)
+    "requests==2.31.0",
+]
+
+[dependency-groups]
+# 학습자마다 결과(규칙 ID·검출 건수)가 동일하도록 개발 도구도 정확히 핀합니다.
+# lock이 실패하면 이 핀만 조정하면 됩니다(공개 전이라 안전).
+dev = [
+    "ruff==0.9.10",
+    "mypy==1.15.0",
+    "pytest==8.3.5",
+    "pytest-cov==6.1.1",
+]
+
+[tool.uv]
+# 이 레포 자체는 설치 대상 패키지가 아닙니다(빌드하지 않음).
+package = false
+# ── 이 레포의 핵심 트릭 ─────────────────────────────────────────────
+# werkzeug는 [project].dependencies에 '없지만' flask가 전이적으로 끌어옵니다.
+# 아래 constraint로 그 전이 버전을 취약한 2.2.3에 고정해 두면,
+# pip-audit(락파일 스캔)이 "내가 직접 쓴 적 없는 werkzeug"의 CVE를 보고합니다.
+# = 락파일을 스캔해야 하는 이유(전이 의존성의 위험)를 그대로 보여 주는 장치입니다.
+constraint-dependencies = ["werkzeug==2.2.3"]
+
+[tool.ruff.lint]
+# E/F(pycodestyle·pyflakes) + I(isort) + UP(pyupgrade) + B(bugbear)
+# + SIM(simplify) + S(flake8-bandit, 보안 규칙)까지 한 번에 켭니다.
+select = ["E", "F", "I", "UP", "B", "SIM", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# leaky_settings.py의 가짜 토큰은 S105(하드코딩 시크릿)로도 잡힙니다.
+# Ruff에도 시크릿 인접 규칙이 있다는 사실 자체가 레슨이므로, 여기서만 끕니다.
+"app/leaky_settings.py" = ["S105"]
+# 테스트에서 assert 사용은 정상이므로 S101을 끕니다.
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+# check_untyped_defs를 기본값(false)으로 두는 것이 '격리 장치'입니다.
+# 타입 주석 없는 함수 본문은 검사하지 않으므로, 취약 코드가 몰려 있는 파일들은
+# mypy를 조용히 통과합니다. type_confusion.py만 주석 있는 함수 + 모듈 레벨
+# 호출로 정확히 2건(return-value, arg-type)을 냅니다.
+
+[tool.pytest.ini_options]
+# 레포 루트를 import 경로에 넣어 `from app.price_logic import ...`가 되게 합니다.
+pythonpath = ["."]

@@ -1,0 +1,46 @@
+name: "03 - pytest (regression tests)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+# 문서: https://docs.github.com/actions/sharing-automations/reusing-workflows
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write   # 커버리지 스티키 코멘트용
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      # ── TODO (도구 실행) ─────────────────────────────────
+      # pytest로 테스트를 실행하고 커버리지 리포트를 만드는 스텝을 완성하세요.
+      # 커버리지 코멘트 액션은 junit xml + coverage xml 두 파일을 입력으로 받습니다.
+      # 힌트: `uv run pytest --cov=app --junitxml=pytest.xml --cov-report=xml`
+      # 문서: https://docs.pytest.org/en/stable/how-to/usage.html
+      #       https://github.com/MishaKav/pytest-coverage-comment
+      # 성공 기준: test_price_logic이 1건 실패해 '빨간불'이 되고,
+      #            PR에 커버리지 스티키 코멘트가 붙으면 됩니다.
+      # ─────────────────────────────────────────────────────
+      - name: Run pytest (TODO)
+        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+      # ── TODO (이벤트 분기) ───────────────────────────────
+      # 아래 코멘트 스텝의 if: 만 채우세요. 두 조건이 함께 필요합니다.
+      #  (1) 앞 스텝이 실패하면 이 스텝은 기본적으로 건너뛰어집니다. 테스트가
+      #      깨진 PR에도 커버리지 코멘트가 남으려면 조건이 하나 더 필요합니다.
+      #  (2) 스티키 코멘트를 붙일 대상은 PR입니다. main 푸시와 예약 실행에는
+      #      코멘트를 달 PR이 없습니다.
+      # 힌트: 실패해도 계속 돌게 하는 상태 확인 함수 하나와, 이벤트 이름 비교
+      #       하나를 && 로 잇습니다.
+      # 문서: https://docs.github.com/actions/reference/evaluate-expressions-in-workflows-and-actions#status-check-functions
+      #       https://docs.github.com/actions/reference/contexts-reference#github-context
+      # ─────────────────────────────────────────────────────
+      - name: 커버리지 스티키 코멘트
+        if: false   # TODO: 앞 스텝이 실패해도, 단 PR일 때만 돌도록 바꾸세요.
+        uses: MishaKav/pytest-coverage-comment@v1
+        with:
+          pytest-xml-coverage-path: coverage.xml
+          junitxml-path: pytest.xml

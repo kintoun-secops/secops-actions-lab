@@ -1,0 +1,25 @@
+name: "04 - pip-audit (dependency CVEs)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+# 07의 예약 실행(schedule)에서도 도는 두 개 중 하나입니다. 코드가 그대로여도
+# 새 CVE가 공개되면 결과가 달라지기 때문입니다.
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      # 락파일에서 '완전히 고정된 전이 폐포'를 requirements.txt로 뽑습니다.
+      - name: 락파일 -> requirements.txt
+        run: uv export --format requirements-txt --no-emit-project -o requirements.txt
+      # 머지 게이트: --no-deps로 '뽑아낸 그 목록 그대로'를 감사합니다.
+      # jinja2·requests와 함께, 직접 쓴 적 없는 werkzeug(전이)의 CVE가 보고됩니다.
+      - name: pip-audit (머지 게이트)
+        run: uvx pip-audit -r requirements.txt --no-deps

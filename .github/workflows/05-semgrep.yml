@@ -1,0 +1,51 @@
+name: "05 - Semgrep (SAST + custom taint)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+# 이 도구는 07의 예약 실행(schedule)에서도 도는 두 개 중 하나입니다. 코드가
+# 그대로여도 레지스트리 룰(p/python)이 갱신되면 결과가 달라지기 때문입니다.
+# 문서: https://docs.github.com/actions/sharing-automations/reusing-workflows
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+  security-events: write   # 코드 스캐닝(SARIF) 업로드용
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    # Semgrep은 uv가 아니라 공식 컨테이너 이미지에서 실행합니다.
+    container: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      # ── TODO (도구 실행) ─────────────────────────────────
+      # Semgrep을 레지스트리 팩(p/python) + 자작 룰(.semgrep/rules.yml)로 실행하고,
+      # SARIF 파일(semgrep.sarif)을 만드는 스텝을 완성하세요.
+      # 힌트: `semgrep --config p/python --config .semgrep/rules.yml --sarif --output semgrep.sarif`
+      #       머지 게이트는 semgrep에 `--error`를 주어 발견 시 exit 1이 되게 합니다.
+      # 문서: https://semgrep.dev/docs/semgrep-ci/sample-ci-configs
+      #       https://semgrep.dev/docs/writing-rules/data-flow/taint-mode
+      # 성공 기준: sqli_taint_only.py에서 데이터 흐름 SQLi(lab-taint-sql-concat)가 보고되고
+      #            이 워크플로가 '빨간불'이 되면 됩니다.
+      # ─────────────────────────────────────────────────────
+      - name: Run Semgrep (TODO)
+        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+      # ── TODO (이벤트 분기) ───────────────────────────────
+      # 아래 업로드 스텝의 if: 만 채우세요. 액션과 입력은 이미 들어 있습니다.
+      # 앞 스텝은 발견이 있으면 --error 때문에 exit 1로 끝납니다. if: 를 비워 두면
+      # 발견이 있는 실행에서만 업로드가 건너뛰어집니다.
+      # 이벤트 쪽은 이렇습니다. main 푸시의 업로드가 기본 브랜치의 기준선이 되고,
+      # PR의 업로드는 그 기준선과의 차이로 읽혀 PR에 알림으로 붙습니다. 기준선이
+      # 아직 없으면 PR 결과가 전부 신규로 보입니다. 그래서 이 스텝은 이벤트로
+      # 좁히지 않고 모든 실행에서 올립니다.
+      # 힌트: 앞 스텝의 성패와 무관하게 돌게 하는 상태 확인 함수가 하나 있습니다.
+      # 문서: https://docs.github.com/actions/reference/evaluate-expressions-in-workflows-and-actions#status-check-functions
+      #       https://github.com/github/codeql-action
+      # 참고: 포크에서 올라온 PR에는 security-events: write가 주어지지 않아 업로드가
+      #       실패합니다. 이 실습은 자기 fork 안에서 PR을 열기 때문에 해당하지 않습니다.
+      # ─────────────────────────────────────────────────────
+      - name: SARIF 업로드 (코드 스캐닝)
+        if: false   # TODO: 앞 스텝이 실패해도 결과가 올라가도록 바꾸세요.
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif

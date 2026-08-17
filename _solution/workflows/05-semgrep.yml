@@ -1,0 +1,39 @@
+name: "05 - Semgrep (SAST + custom taint)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+# 07의 예약 실행(schedule)에서도 도는 두 개 중 하나입니다. 코드가 그대로여도
+# 레지스트리 룰(p/python)이 갱신되면 결과가 달라지기 때문입니다.
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+  security-events: write   # 코드 스캐닝(SARIF) 업로드용
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    # Semgrep은 uv가 아니라 공식 컨테이너 이미지에서 실행합니다.
+    container: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      # SARIF를 생성하면서(--sarif) 발견이 있으면 exit 1(--error)이 되어 빨간불.
+      # semgrep은 종료 전에 SARIF 파일을 먼저 기록하므로 아래 업로드가 가능합니다.
+      - name: Semgrep (SARIF 생성 + 머지 게이트)
+        run: >
+          semgrep
+          --config p/python
+          --config .semgrep/rules.yml
+          --sarif --output semgrep.sarif
+          --error
+      # 게이트가 실패(exit 1)해도 결과를 Security 탭에 올리도록 always()로 업로드.
+      # 이벤트로 좁히지 않는 이유: main 푸시의 업로드가 기본 브랜치의 기준선이 되고,
+      # PR의 업로드는 그 기준선과의 차이로 읽혀 PR에 알림으로 붙습니다. 한쪽만
+      # 올리면 남는 쪽의 정보가 사라집니다.
+      # (포크에서 올라온 PR에는 security-events: write가 주어지지 않아 업로드가
+      #  실패합니다. 이 실습은 자기 fork 안에서 PR을 열기 때문에 해당하지 않습니다.)
+      - name: SARIF 업로드 (코드 스캐닝)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif

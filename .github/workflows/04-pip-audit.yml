@@ -1,0 +1,32 @@
+name: "04 - pip-audit (dependency CVEs)"
+
+# 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
+# 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
+# 이 도구는 07의 예약 실행(schedule)에서도 도는 두 개 중 하나입니다. 코드가
+# 그대로여도 새 CVE가 공개되면 결과가 달라지기 때문입니다.
+# 문서: https://docs.github.com/actions/sharing-automations/reusing-workflows
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+      # ── TODO ─────────────────────────────────────────────
+      # 락파일에서 requirements.txt를 뽑아 pip-audit으로 스캔하는 스텝을 완성하세요.
+      # 힌트: `uv export --format requirements-txt --no-emit-project -o requirements.txt`
+      #       그다음 `uvx pip-audit -r requirements.txt --no-deps`
+      #       (--no-deps인 이유: uv export가 이미 '완전히 고정된 전이 폐포'를 뽑기 때문입니다.
+      #        그게 곧 '락파일 스캔' 레슨입니다.)
+      # 문서: https://github.com/pypa/pip-audit
+      #       https://docs.astral.sh/uv/reference/cli/#uv-export
+      # 성공 기준: jinja2·requests와 '직접 쓴 적 없는' werkzeug의 CVE가 보고되고
+      #            이 워크플로가 '빨간불'이 되면 됩니다.
+      # ─────────────────────────────────────────────────────
+      - name: Run pip-audit (TODO)
+        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."

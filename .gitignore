@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+requirements.txt
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+pytest.xml
+coverage.xml
+.coverage
