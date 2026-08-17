@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --frozen
       # ── TODO (도구 실행) ─────────────────────────────────
       # pytest로 테스트를 실행하고 커버리지 리포트를 만드는 스텝을 완성하세요.

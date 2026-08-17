@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - run: uv sync --frozen
       # ── TODO ─────────────────────────────────────────────
       # 락파일에서 requirements.txt를 뽑아 pip-audit으로 스캔하는 스텝을 완성하세요.
