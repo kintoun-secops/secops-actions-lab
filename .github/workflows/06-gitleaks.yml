@@ -12,7 +12,7 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # fetch-depth: 0 은 얕은 클론이 아니라 '전체 히스토리'를 받아옵니다.
           # gitleaks는 히스토리 전체를 스캔해야 의미가 있습니다 — 시크릿은 과거
