@@ -46,6 +46,6 @@ jobs:
       # ─────────────────────────────────────────────────────
       - name: SARIF 업로드 (코드 스캐닝)
         if: false   # TODO: 앞 스텝이 실패해도 결과가 올라가도록 바꾸세요.
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: semgrep.sarif
