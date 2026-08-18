@@ -3,29 +3,23 @@ name: "06 - gitleaks (secret scanning)"
 # 07-ci-summary.yml이 불러 쓰는 재사용 워크플로입니다. workflow_dispatch는
 # 이 도구 하나만 따로 돌려 보고 싶을 때를 위해 남겨 둡니다.
 # 문서: https://docs.github.com/actions/sharing-automations/reusing-workflows
+
 on:
   workflow_call:
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
         with:
-          # fetch-depth: 0 은 얕은 클론이 아니라 '전체 히스토리'를 받아옵니다.
-          # gitleaks는 히스토리 전체를 스캔해야 의미가 있습니다 — 시크릿은 과거
-          # 커밋에 남아 있어도 여전히 유효하기 때문입니다. 놓치기 쉬운 설정이라
-          # 이 한 줄만 미리 채워 둡니다.
+          # 전체 Git 히스토리를 받아 과거 커밋의 시크릿까지 검사
           fetch-depth: 0
-      # ── TODO ─────────────────────────────────────────────
-      # gitleaks로 시크릿을 스캔하는 스텝을 완성하세요.
-      # 힌트: gitleaks/gitleaks-action@v2 를 사용합니다(개인 계정은 무료).
-      #       (org 레포라면 바이너리를 직접 내려받아 `gitleaks detect`로 대체할 수 있습니다.)
-      # 문서: https://github.com/gitleaks/gitleaks-action
-      # 성공 기준: leaky_settings.py의 가짜 PAT와 deploy/fake_deploy_key.pem의
-      #            가짜 RSA 키가 검출되어 이 워크플로가 '빨간불'이 되면 됩니다.
-      # ─────────────────────────────────────────────────────
-      - name: Run gitleaks (TODO)
-        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2

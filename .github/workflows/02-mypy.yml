@@ -23,5 +23,5 @@ jobs:
       # 성공 기준: type_confusion.py에서 반환 타입 오류(return-value)와
       #            인자 타입 오류(arg-type) 2건이 뜨고 '빨간불'이 되면 됩니다.
       # ─────────────────────────────────────────────────────
-      - name: Run mypy (TODO)
-        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+      - name: Run mypy
+        run: uv run mypy app/
