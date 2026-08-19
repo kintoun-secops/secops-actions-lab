@@ -34,7 +34,7 @@ jobs:
       #       https://docs.github.com/actions/reference/evaluate-expressions-in-workflows-and-actions
       # ─────────────────────────────────────────────────────
       - name: Ruff lint -> reviewdog (PR 인라인 리뷰)
-        if: github.event_name == "pull_request"   # TODO: PR 이벤트일 때만 돌도록 바꾸세요.
+        if: github.event_name == 'pull_request'   # TODO: PR 이벤트일 때만 돌도록 바꾸세요.
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
