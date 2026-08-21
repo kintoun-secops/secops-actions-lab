@@ -29,7 +29,12 @@ jobs:
       #            이 워크플로가 '빨간불'이 되면 됩니다.
       # ─────────────────────────────────────────────────────
       - name: Run Semgrep (TODO)
-        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+        run: |
+          semgrep scan \
+          --config p/python \
+          --config .semgrep/rules.yml \
+          --sarif --output semgrep.sarif \
+          --error
       # ── TODO (이벤트 분기) ───────────────────────────────
       # 아래 업로드 스텝의 if: 만 채우세요. 액션과 입력은 이미 들어 있습니다.
       # 앞 스텝은 발견이 있으면 --error 때문에 exit 1로 끝납니다. if: 를 비워 두면
@@ -45,7 +50,7 @@ jobs:
       #       실패합니다. 이 실습은 자기 fork 안에서 PR을 열기 때문에 해당하지 않습니다.
       # ─────────────────────────────────────────────────────
       - name: SARIF 업로드 (코드 스캐닝)
-        if: false   # TODO: 앞 스텝이 실패해도 결과가 올라가도록 바꾸세요.
+        if: ${{ always() }}   # TODO: 앞 스텝이 실패해도 결과가 올라가도록 바꾸세요.
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif

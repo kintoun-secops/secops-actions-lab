@@ -34,7 +34,7 @@ jobs:
       #       https://docs.github.com/actions/reference/evaluate-expressions-in-workflows-and-actions
       # ─────────────────────────────────────────────────────
       - name: Ruff lint -> reviewdog (PR 인라인 리뷰)
-        if: false   # TODO: PR 이벤트일 때만 돌도록 바꾸세요.
+        if: github.event_name == 'pull_request'   # TODO: PR 이벤트일 때만 돌도록 바꾸세요.
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -56,5 +56,8 @@ jobs:
       # 성공 기준: 이 워크플로가 '빨간불'이 되고, 로그에 포맷 불일치(messy_format)와
       #            문자열 조립 SQL(S608)·가변 기본 인자(B006) 같은 린트가 함께 보이면 됩니다.
       # ─────────────────────────────────────────────────────
-      - name: Run Ruff (TODO)
-        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+      - name: Run Ruff formatter
+        run: uv run ruff format --check .
+      - name: Run Ruff lint and security
+        run: uv run ruff check app/
+

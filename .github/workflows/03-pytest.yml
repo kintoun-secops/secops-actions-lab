@@ -26,7 +26,7 @@ jobs:
       #            PR에 커버리지 스티키 코멘트가 붙으면 됩니다.
       # ─────────────────────────────────────────────────────
       - name: Run pytest (TODO)
-        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+        run: uv run pytest --cov=app --junitxml=pytest.xml --cov-report=xml:coverage.xml
       # ── TODO (이벤트 분기) ───────────────────────────────
       # 아래 코멘트 스텝의 if: 만 채우세요. 두 조건이 함께 필요합니다.
       #  (1) 앞 스텝이 실패하면 이 스텝은 기본적으로 건너뛰어집니다. 테스트가
@@ -39,7 +39,7 @@ jobs:
       #       https://docs.github.com/actions/reference/contexts-reference#github-context
       # ─────────────────────────────────────────────────────
       - name: 커버리지 스티키 코멘트
-        if: false   # TODO: 앞 스텝이 실패해도, 단 PR일 때만 돌도록 바꾸세요.
+        if: ${{ always() }} && github.event_name == 'pull_request'  # TODO: 앞 스텝이 실패해도, 단 PR일 때만 돌도록 바꾸세요.
         uses: MishaKav/pytest-coverage-comment@v1
         with:
           pytest-xml-coverage-path: coverage.xml

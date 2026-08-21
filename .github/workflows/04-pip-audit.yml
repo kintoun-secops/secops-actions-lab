@@ -28,5 +28,7 @@ jobs:
       # 성공 기준: jinja2·requests와 '직접 쓴 적 없는' werkzeug의 CVE가 보고되고
       #            이 워크플로가 '빨간불'이 되면 됩니다.
       # ─────────────────────────────────────────────────────
+      - name: lock 파일에서 의존성 추출
+        run: uv export --format requirements.txt --no-emit-project -o requirements.txt
       - name: Run pip-audit (TODO)
-        run: echo "여기를 채우세요 — 위 주석의 문서를 읽고."
+        run: uvx pip-audit -r requirements.txt --no-deps

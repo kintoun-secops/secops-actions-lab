@@ -145,7 +145,7 @@ jobs:
   # ─────────────────────────────────────────────────────────
   ruff:
     needs: changes
-    if: true   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
     uses: ./.github/workflows/01-ruff.yml
     permissions:
       contents: read
@@ -153,14 +153,14 @@ jobs:
 
   mypy:
     needs: changes
-    if: true   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
     uses: ./.github/workflows/02-mypy.yml
     permissions:
       contents: read
 
   pytest:
     needs: changes
-    if: true   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
     uses: ./.github/workflows/03-pytest.yml
     permissions:
       contents: read
@@ -169,7 +169,7 @@ jobs:
   # 예약 실행에서도 도는 쪽입니다. 조건은 (1)만 겁니다.
   pip-audit:
     needs: changes
-    if: true   # TODO: 코드가 바뀌었을 때.
+    if: needs.changes.outputs.code == 'true'   # TODO: 코드가 바뀌었을 때.
     uses: ./.github/workflows/04-pip-audit.yml
     permissions:
       contents: read
@@ -177,7 +177,7 @@ jobs:
   # 예약 실행에서도 도는 쪽입니다. 조건은 (1)만 겁니다.
   semgrep:
     needs: changes
-    if: true   # TODO: 코드가 바뀌었을 때.
+    if: needs.changes.outputs.code == 'true'   # TODO: 코드가 바뀌었을 때.
     uses: ./.github/workflows/05-semgrep.yml
     permissions:
       contents: read
@@ -185,7 +185,7 @@ jobs:
 
   gitleaks:
     needs: changes
-    if: true   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
+    if: needs.changes.outputs.code == 'true' && github.event_name != 'schedule'   # TODO: 코드가 바뀌었고, 예약 실행이 아닐 때.
     uses: ./.github/workflows/06-gitleaks.yml
     permissions:
       contents: read
