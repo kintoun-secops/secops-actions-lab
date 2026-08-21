@@ -355,3 +355,4 @@ diff .github/workflows/07-ci-summary.yml _solution/workflows/07-ci-summary.yml
 ## 라이선스
 
 MIT License. 자세한 내용은 [`LICENSE`](./LICENSE)를 참고하세요.
+테스트 코멘트
