@@ -7,23 +7,20 @@ None 비교(E711), 미사용 import(F401), import 미정렬(I001),
 clamp_values는 타입이 정확해 mypy는 조용합니다.
 """
 
-from typing import List
-import os
 
-
-def clamp_values(numbers: List[int]) -> List[int]:
+def clamp_values(numbers: list[int]) -> list[int]:
     # 중첩 if는 하나로 합칠 수 있음 (SIM102)
-    result: List[int] = []
+    result: list[int] = []
     for value in numbers:
-        if value > 0:
-            if value < 100:
-                result.append(value)
+        if value > 0 and value < 100:
+            result.append(value)
     return result
 
 
-def find_missing(value, items=[]):
+def find_missing(value, items=None):
     # 가변 기본값 (B006) / None 비교 (E711)
-    if value == None:
+    if items is None:
+        items = []
+    if value is None:
         return items
     items.append(value)
-    return items

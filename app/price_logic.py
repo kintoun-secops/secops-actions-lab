@@ -14,6 +14,6 @@ def order_total(quantity: int, unit_price: int = 1000) -> int:
           개당 100원을 깎아 줍니다. 미만이면 기본
           단가(unit_price)를 그대로 씁니다.
     """
-    if quantity > 10:
+    if quantity >= 10:
         unit_price = unit_price - 100
     return quantity * unit_price
