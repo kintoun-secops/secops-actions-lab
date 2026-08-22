@@ -8,20 +8,19 @@ clamp_values는 타입이 정확해 mypy는 조용합니다.
 """
 
 
-
 def clamp_values(numbers: list[int]) -> list[int]:
     # 중첩 if는 하나로 합칠 수 있음 (SIM102)
     result: list[int] = []
     for value in numbers:
         if value > 0 and value < 100:
-                result.append(value)
+            result.append(value)
     return result
 
 
 def find_missing(value, items=None):
     # 가변 기본값 (B006) / None 비교 (E711)
     if items is None:
-         items = []
+        items = []
     if value is None:
         return items
     items.append(value)

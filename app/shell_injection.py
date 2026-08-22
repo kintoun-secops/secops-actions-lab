@@ -11,4 +11,4 @@ import subprocess
 
 
 def run_command(cmd):
-    subprocess.run(cmd.split(), shell=False) # noqa: S603
+    subprocess.run(cmd.split(), shell=False)  # noqa: S603
