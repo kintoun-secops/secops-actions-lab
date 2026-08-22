@@ -8,8 +8,8 @@ Ruff는 타입을 보지 않아 이 파일에 조용합니다.
 """
 
 
-def apply_discount(price: int, rate: float) -> int:
+def apply_discount(price: int, rate: float) -> float:
     return price * rate
 
 
-result = apply_discount("100", 0.1)
+result = apply_discount(100, 0.1)
