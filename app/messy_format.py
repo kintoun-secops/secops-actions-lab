@@ -11,5 +11,5 @@
 
 
 def build_label(name: str, count: int) -> str:
-    unit = 'items' if count != 1 else 'item'
-    return f'{name}: {count} {unit}'
+    unit = "items" if count != 1 else "item"
+    return f"{name}: {count} {unit}"

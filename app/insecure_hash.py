@@ -9,4 +9,4 @@ import hashlib
 
 
 def fingerprint(data):
-    return hashlib.md5(data).hexdigest()
+    return hashlib.sha256(data).hexdigest()

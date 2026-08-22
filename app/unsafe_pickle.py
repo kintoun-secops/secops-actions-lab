@@ -7,8 +7,8 @@
 타입 주석이 없어 mypy는 조용합니다.
 """
 
-import pickle
+import json
 
 
 def deserialize(blob):
-    return pickle.loads(blob)
+    return json.loads(blob)

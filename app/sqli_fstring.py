@@ -8,4 +8,4 @@ sqli_taint_only.py와 나란히 두면 차이가 드러납니다.
 
 
 def find_user(cur, name):
-    cur.execute(f"SELECT * FROM users WHERE name = '{name}'")
+    cur.execute("SELECT * FROM users WHERE name = ?", (name,))
